@@ -4,7 +4,9 @@ import java.util.List;
 
 import edu.byu.cs.tweeter.model.domain.Status;
 import edu.byu.cs.tweeter.model.net.request.FeedRequest;
+import edu.byu.cs.tweeter.model.net.request.StoryRequest;
 import edu.byu.cs.tweeter.model.net.response.FeedResponse;
+import edu.byu.cs.tweeter.model.net.response.StoryResponse;
 import edu.byu.cs.tweeter.util.FakeData;
 import edu.byu.cs.tweeter.util.Pair;
 
@@ -25,6 +27,24 @@ public class StatusService {
 
         Pair<List<Status>, Boolean> pageOfStatuses = getFakeData().getPageOfStatus(request.getLastStatus(), request.getLimit());
         return new FeedResponse(pageOfStatuses.getFirst(), pageOfStatuses.getSecond());
+    }
+
+    public StoryResponse getStory(StoryRequest request){
+        if(request.getUserAlias() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have a user alias");
+        }
+        else if (request.getLimit() <= 0){
+            throw new RuntimeException("[Bad Request] Request needs to have a limit greater than 0");
+        }
+        else if (request.getAuthToken() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have an auth token");
+        }
+        else if (request.getLastStatus() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have a last status");
+        }
+
+        Pair<List<Status>, Boolean> pageOfStatuses = getFakeData().getPageOfStatus(request.getLastStatus(), request.getLimit());
+        return new StoryResponse(pageOfStatuses.getFirst(), pageOfStatuses.getSecond());
     }
 
     /**
