@@ -1,54 +1,58 @@
 package edu.byu.cs.tweeter.client.model.service;
 
-import edu.byu.cs.tweeter.client.model.service.backgroundTask.BackgroundTaskUtils;
-import edu.byu.cs.tweeter.client.model.service.backgroundTask.LoginTask;
-import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.LoginTaskHandler;
+
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.widget.ImageView;
+
+import java.io.ByteArrayOutputStream;
+import java.util.Base64;
+
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.AuthenticateUserHandler;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.GetUserHandler;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.SimpleNotificationHandler;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.observer.AuthenticateUserObserver;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.observer.SimpleNotificationObserver;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.observer.UserObserver;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.GetUserTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.LoginTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.LogoutTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.RegisterTask;
 import edu.byu.cs.tweeter.model.domain.AuthToken;
-import edu.byu.cs.tweeter.model.domain.User;
 
-/**
- * Contains the business logic to support the login operation.
- */
-public class UserService {
+public class UserService extends Service {
 
-    public static final String URL_PATH = "/login";
 
-    /**
-     * An observer interface to be implemented by observers who want to be notified when
-     * asynchronous operations complete.
-     */
-    public interface LoginObserver {
-        void handleSuccess(User user, AuthToken authToken);
-        void handleFailure(String message);
-        void handleException(Exception exception);
+    public void logout(AuthToken authToken, SimpleNotificationObserver logoutObserver){
+        LogoutTask logoutTask = new LogoutTask(authToken, new SimpleNotificationHandler(logoutObserver));
+        runTask(logoutTask);
     }
 
-    /**
-     * Creates an instance.
-     *
-     */
-     public UserService() {
-     }
+    public void register(String firstName, String lastName, String alias, String password, ImageView imageToUpload, AuthenticateUserObserver observer){
+        Bitmap image = ((BitmapDrawable) imageToUpload.getDrawable()).getBitmap();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        image.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+        byte[] imageBytes = bos.toByteArray();
 
-    /**
-     * Makes an asynchronous login request.
-     *
-     * @param username the user's name.
-     * @param password the user's password.
-     */
-    public void login(String username, String password, LoginObserver observer) {
-        LoginTask loginTask = getLoginTask(username, password, observer);
-        BackgroundTaskUtils.runTask(loginTask);
+        String imageBytesBase64 = Base64.getEncoder().encodeToString(imageBytes);
+
+        RegisterTask registerTask = new RegisterTask(firstName, lastName,
+                alias, password, imageBytesBase64, new AuthenticateUserHandler(observer));
+
+        runTask(registerTask);
+
     }
 
-    /**
-     * Returns an instance of {@link LoginTask}. Allows mocking of the LoginTask class for
-     * testing purposes. All usages of LoginTask should get their instance from this method to
-     * allow for proper mocking.
-     *
-     * @return the instance.
-     */
-    LoginTask getLoginTask(String username, String password, LoginObserver observer) {
-        return new LoginTask(this, username, password, new LoginTaskHandler(observer));
+    public void login(String username, String password, AuthenticateUserObserver observer){
+        LoginTask loginTask = new LoginTask(username, password, new AuthenticateUserHandler(observer));
+        runTask(loginTask);
     }
+
+
+    public void getUserProfile(AuthToken currUserAuthToken, String toString, UserObserver getUserObserver) {
+        GetUserTask getUserTask = new GetUserTask(currUserAuthToken, toString, new GetUserHandler(getUserObserver));
+        runTask(getUserTask);
+    }
+
+
 }

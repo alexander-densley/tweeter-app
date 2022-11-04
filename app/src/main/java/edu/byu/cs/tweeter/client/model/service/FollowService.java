@@ -1,60 +1,64 @@
 package edu.byu.cs.tweeter.client.model.service;
 
-import java.util.List;
-
-import edu.byu.cs.tweeter.client.model.service.backgroundTask.BackgroundTaskUtils;
-import edu.byu.cs.tweeter.client.model.service.backgroundTask.GetFollowingTask;
-import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.GetFollowingTaskHandler;
+import edu.byu.cs.tweeter.client.cache.Cache;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.CountFollowHandler;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.IsFollowerHandler;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.PageNotificationHandler;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.handler.SimpleNotificationHandler;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.observer.CountFollowObserver;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.observer.IsFollowObserver;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.observer.PagedObserver;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.observer.SimpleNotificationObserver;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.FollowTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.GetFollowersCountTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.GetFollowersTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.GetFollowingCountTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.GetFollowingTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.IsFollowerTask;
+import edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks.UnfollowTask;
 import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.User;
 
-/**
- * Contains the business logic for getting the users a user is following.
- */
-public class FollowService {
+public class FollowService extends Service{
 
-    public static final String URL_PATH = "/getfollowing";
 
-    /**
-     * An observer interface to be implemented by observers who want to be notified when
-     * asynchronous operations complete.
-     */
-    public interface GetFollowingObserver {
-        void handleSuccess(List<User> followees, boolean hasMorePages);
-        void handleFailure(String message);
-        void handleException(Exception exception);
+    public void loadMoreItemsFollowers(AuthToken currUserAuthToken, User user, int pageSize, User lastFollower, PagedObserver<User> observer) {
+        GetFollowersTask getFollowersTask = new GetFollowersTask(currUserAuthToken,
+                user, pageSize, lastFollower, new PageNotificationHandler(observer));
+        runTask(getFollowersTask);
+    }
+    public void unfollow(AuthToken currUserAuthToken, User user, SimpleNotificationObserver observer) {
+        UnfollowTask unfollowTask = new UnfollowTask(currUserAuthToken,
+                user, new SimpleNotificationHandler(observer));
+        runTask(unfollowTask);
+    }
+    public void follow(AuthToken currUserAuthToken, User user, SimpleNotificationObserver observer){
+        FollowTask followTask = new FollowTask(currUserAuthToken,
+                user, new SimpleNotificationHandler(observer));
+        runTask(followTask);
     }
 
-    /**
-     * Creates an instance.
-     */
-    public FollowService() {}
+    public void updateSelectedUserFollowingAndFollowers(AuthToken currUserAuthToken, User user, CountFollowObserver followerCountObserver, CountFollowObserver followingCountObserver) {
+        GetFollowersCountTask followersCountTask = new GetFollowersCountTask(currUserAuthToken,
+                user, new CountFollowHandler(followerCountObserver));
+        runTask(followersCountTask);
 
-    /**
-     * Requests the users that the user specified in the request is following.
-     * Limits the number of followees returned and returns the next set of
-     * followees after any that were returned in a previous request.
-     * This is an asynchronous operation.
-     *
-     * @param authToken the session auth token.
-     * @param targetUser the user for whom followees are being retrieved.
-     * @param limit the maximum number of followees to return.
-     * @param lastFollowee the last followee returned in the previous request (can be null).
-     */
-    public void getFollowees(AuthToken authToken, User targetUser, int limit, User lastFollowee, GetFollowingObserver observer) {
-        GetFollowingTask followingTask = getGetFollowingTask(authToken, targetUser, limit, lastFollowee, observer);
-        BackgroundTaskUtils.runTask(followingTask);
+        GetFollowingCountTask followingCountTask = new GetFollowingCountTask(Cache.getInstance().getCurrUserAuthToken(),
+                user, new CountFollowHandler(followingCountObserver));
+        runTask(followingCountTask);
     }
 
-    /**
-     * Returns an instance of {@link GetFollowingTask}. Allows mocking of the
-     * GetFollowingTask class for testing purposes. All usages of GetFollowingTask
-     * should get their instance from this method to allow for proper mocking.
-     *
-     * @return the instance.
-     */
-    // This method is public so it can be accessed by test cases
-    public GetFollowingTask getGetFollowingTask(AuthToken authToken, User targetUser, int limit, User lastFollowee, GetFollowingObserver observer) {
-        return new GetFollowingTask(this, authToken, targetUser, limit, lastFollowee, new GetFollowingTaskHandler(observer));
+    public void isFollower(AuthToken currUserAuthToken, User currUser, User user, IsFollowObserver isFollowerObserver) {
+        IsFollowerTask isFollowerTask = new IsFollowerTask(currUserAuthToken,
+                currUser, user, new IsFollowerHandler(isFollowerObserver));
+        runTask(isFollowerTask);
     }
+
+    public void loadMoreItemsFollowing(AuthToken currUserAuthToken, User user, int pageSize, User lastFollowee, PagedObserver getFollowingObserver) {
+        GetFollowingTask getFollowingTask = new GetFollowingTask(currUserAuthToken,
+                user, pageSize, lastFollowee, new PageNotificationHandler<User>(getFollowingObserver));
+        runTask(getFollowingTask);
+    }
+
+
 }
