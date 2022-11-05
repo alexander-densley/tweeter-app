@@ -22,7 +22,7 @@ public abstract class AuthenticateTask extends BackgroundTask {
      */
     protected final String password;
 
-    private User authenticatedUser;
+    protected User authenticatedUser;
     private AuthToken authToken;
 
     protected AuthenticateTask(Handler messageHandler, String username, String password){
@@ -49,4 +49,7 @@ public abstract class AuthenticateTask extends BackgroundTask {
         msgBundle.putSerializable(AUTH_TOKEN_KEY, authToken);
     }
 
+    public User getAuthenticatedUser() {
+        return authenticatedUser;
+    }
 }
