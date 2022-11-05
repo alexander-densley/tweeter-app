@@ -4,8 +4,10 @@ import java.util.List;
 
 import edu.byu.cs.tweeter.model.domain.Status;
 import edu.byu.cs.tweeter.model.net.request.FeedRequest;
+import edu.byu.cs.tweeter.model.net.request.PostStatusRequest;
 import edu.byu.cs.tweeter.model.net.request.StoryRequest;
 import edu.byu.cs.tweeter.model.net.response.FeedResponse;
+import edu.byu.cs.tweeter.model.net.response.PostStatusResponse;
 import edu.byu.cs.tweeter.model.net.response.StoryResponse;
 import edu.byu.cs.tweeter.util.FakeData;
 import edu.byu.cs.tweeter.util.Pair;
@@ -45,6 +47,17 @@ public class StatusService {
 
         Pair<List<Status>, Boolean> pageOfStatuses = getFakeData().getPageOfStatus(request.getLastStatus(), request.getLimit());
         return new StoryResponse(pageOfStatuses.getFirst(), pageOfStatuses.getSecond());
+    }
+
+    public PostStatusResponse postStatus(PostStatusRequest request){
+        if(request.getStatus() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have a status");
+        }
+        else if (request.getAuthToken() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have an auth token");
+        }
+
+        return new PostStatusResponse();
     }
 
     /**
