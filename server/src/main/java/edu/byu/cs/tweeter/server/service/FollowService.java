@@ -1,6 +1,7 @@
 package edu.byu.cs.tweeter.server.service;
 
 import java.util.List;
+import java.util.Random;
 
 import edu.byu.cs.tweeter.model.domain.User;
 import edu.byu.cs.tweeter.model.net.request.FollowRequest;
@@ -8,12 +9,14 @@ import edu.byu.cs.tweeter.model.net.request.FollowersCountRequest;
 import edu.byu.cs.tweeter.model.net.request.FollowersRequest;
 import edu.byu.cs.tweeter.model.net.request.FollowingCountRequest;
 import edu.byu.cs.tweeter.model.net.request.FollowingRequest;
+import edu.byu.cs.tweeter.model.net.request.IsFollowerRequest;
 import edu.byu.cs.tweeter.model.net.request.UnfollowRequest;
 import edu.byu.cs.tweeter.model.net.response.FollowResponse;
 import edu.byu.cs.tweeter.model.net.response.FollowersCountResponse;
 import edu.byu.cs.tweeter.model.net.response.FollowersResponse;
 import edu.byu.cs.tweeter.model.net.response.FollowingCountResponse;
 import edu.byu.cs.tweeter.model.net.response.FollowingResponse;
+import edu.byu.cs.tweeter.model.net.response.IsFollowerResponse;
 import edu.byu.cs.tweeter.model.net.response.UnfollowResponse;
 import edu.byu.cs.tweeter.server.dao.FollowDAO;
 import edu.byu.cs.tweeter.util.FakeData;
@@ -100,6 +103,18 @@ public class FollowService {
             throw new RuntimeException("[Bad Request] Request needs to have an auth token");
         }
         return new FollowResponse();
+    }
+
+    public IsFollowerResponse isFollower(IsFollowerRequest request) {
+        if(request.getFollowee() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have a followee");
+        }else if (request.getFollower() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have a follower");
+        } else if (request.getAuthToken() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have an auth token");
+        }
+        boolean followStatus = new Random().nextInt() > 0;
+        return new IsFollowerResponse(followStatus);
     }
 
     /**

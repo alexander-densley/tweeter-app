@@ -2,11 +2,15 @@ package edu.byu.cs.tweeter.client.model.service.backgroundTask.tasks;
 
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 
-import java.util.Random;
+import java.io.IOException;
 
 import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.User;
+import edu.byu.cs.tweeter.model.net.TweeterRemoteException;
+import edu.byu.cs.tweeter.model.net.request.IsFollowerRequest;
+import edu.byu.cs.tweeter.model.net.response.IsFollowerResponse;
 
 /**
  * Background task that determines if one user is following another.
@@ -35,9 +39,24 @@ public class IsFollowerTask extends AuthenticatedTask {
 
     @Override
     protected void runTask() {
-        isFollower = new Random().nextInt() > 0;
+//
 
-        sendSuccessMessage();
+        try{
+            IsFollowerRequest request = new IsFollowerRequest(follower, followee, authToken);
+            IsFollowerResponse response = getServerFacade().isFollower(request, "/isfollower");
+
+            if(response.isSuccess()) {
+                isFollower = response.getIsFollower();
+//                isFollower = new Random().nextInt() > 0;
+                sendSuccessMessage();
+            } else {
+                throw new RuntimeException("[Bad Request] Unable to determine if follower");
+            }
+        } catch (IOException | TweeterRemoteException e) {
+            e.printStackTrace();
+            Log.e(BackgroundTask.EXCEPTION_KEY, e.getMessage(), e);
+            throw new RuntimeException("[Server Error] Unable to determine if follower");
+        }
     }
 
     @Override
