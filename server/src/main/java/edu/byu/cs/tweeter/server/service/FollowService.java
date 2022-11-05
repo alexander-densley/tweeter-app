@@ -3,8 +3,10 @@ package edu.byu.cs.tweeter.server.service;
 import java.util.List;
 
 import edu.byu.cs.tweeter.model.domain.User;
+import edu.byu.cs.tweeter.model.net.request.FollowersCountRequest;
 import edu.byu.cs.tweeter.model.net.request.FollowersRequest;
 import edu.byu.cs.tweeter.model.net.request.FollowingRequest;
+import edu.byu.cs.tweeter.model.net.response.FollowersCountResponse;
 import edu.byu.cs.tweeter.model.net.response.FollowersResponse;
 import edu.byu.cs.tweeter.model.net.response.FollowingResponse;
 import edu.byu.cs.tweeter.server.dao.FollowDAO;
@@ -52,6 +54,17 @@ public class FollowService {
         User targetUser = getFakeData().findUserByAlias(request.getFollowerAlias());
         Pair<List<User>, Boolean> pageOfUsers = getFakeData().getPageOfUsers(lastUser, request.getLimit(), targetUser);
         return new FollowersResponse(pageOfUsers.getFirst(), pageOfUsers.getSecond());
+    }
+
+    public FollowersCountResponse getFollowersCount(FollowersCountRequest request) {
+        if(request.getTargetAlias() == null) {
+            throw new RuntimeException("[Bad Request] Request needs to have a follower alias");
+        } else if (request.getAuthToken() == null){
+            throw new RuntimeException("[Bad Request] Request needs to have an auth token");
+        }
+        int count = getFakeData().getFakeUsers().size();
+
+        return new FollowersCountResponse(count);
     }
 
     /**
