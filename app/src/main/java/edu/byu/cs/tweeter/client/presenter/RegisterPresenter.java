@@ -47,7 +47,7 @@ public class RegisterPresenter extends AuthenticatePresenter {
         }
 
         if (imageToUpload.getDrawable() == null) {
-            throw new IllegalArgumentException("Profile image must be uploaded.");
+            return "Profile image must be uploaded.";
         }
         return null;
     }

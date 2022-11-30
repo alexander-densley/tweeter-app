@@ -27,11 +27,15 @@ public class GetFollowingTask extends PagedUserTask {
 
     @Override
     protected Pair<List<User>, Boolean> getItems() {
-        if(getLastItem() == null) {
-            lastItem = getFakeData().getFirstUser();
-        }
         try{
-            FollowingRequest request = new FollowingRequest(authToken, getTargetUser().getAlias(), limit, getLastItem().getAlias());
+            String alias;
+            if(getLastItem() == null){
+                alias = null;
+            }
+            else{
+                alias = getLastItem().getAlias();
+            }
+            FollowingRequest request = new FollowingRequest(authToken, getTargetUser().getAlias(), limit, alias);
             FollowingResponse response = getServerFacade().getFollowees(request, "/getfollowing");
 
             if(response.isSuccess()) {

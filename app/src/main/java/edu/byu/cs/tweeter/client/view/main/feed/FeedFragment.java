@@ -27,7 +27,9 @@ import com.squareup.picasso.Picasso;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import edu.byu.cs.tweeter.R;
@@ -164,7 +166,11 @@ public class FeedFragment extends Fragment implements PagedPresenter.PagedView<S
             Picasso.get().load(status.getUser().getImageUrl()).into(userImage);
             userAlias.setText(status.getUser().getAlias());
             userName.setText(status.getUser().getName());
-            datetime.setText(status.getDate());
+            SimpleDateFormat sf = new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
+            Date date = new Date(Long.parseLong(status.getDate()));
+            String display = sf.format(date);
+            datetime.setText(display);
+
 
             // @mentions and urls clickable
             SpannableString spannableString = new SpannableString(status.getPost());

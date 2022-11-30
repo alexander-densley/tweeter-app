@@ -1,16 +1,28 @@
 package edu.byu.cs.tweeter.server.service;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 import edu.byu.cs.tweeter.model.domain.AuthToken;
 import edu.byu.cs.tweeter.model.domain.User;
+import edu.byu.cs.tweeter.model.net.request.GetUserRequest;
 import edu.byu.cs.tweeter.model.net.request.LoginRequest;
 import edu.byu.cs.tweeter.model.net.request.LogoutRequest;
 import edu.byu.cs.tweeter.model.net.request.RegisterRequest;
+import edu.byu.cs.tweeter.model.net.response.GetUserResponse;
 import edu.byu.cs.tweeter.model.net.response.LoginResponse;
 import edu.byu.cs.tweeter.model.net.response.LogoutResponse;
 import edu.byu.cs.tweeter.model.net.response.RegisterResponse;
+import edu.byu.cs.tweeter.server.dao.dao_interface.DAOFactoryInterface;
 import edu.byu.cs.tweeter.util.FakeData;
 
 public class UserService {
+
+    private DAOFactoryInterface daoFactory;
+
+    public UserService(DAOFactoryInterface daoFactory) {
+        this.daoFactory = daoFactory;
+    }
 
     public LoginResponse login(LoginRequest request) {
         if(request.getUsername() == null){
@@ -19,10 +31,18 @@ public class UserService {
             throw new RuntimeException("[Bad Request] Missing a password");
         }
 
-        // TODO: Generates dummy data. Replace with a real implementation.
-        User user = getDummyUser();
-        AuthToken authToken = getDummyAuthToken();
-        return new LoginResponse(user, authToken);
+        String correctPassword = daoFactory.makeUserDAO().getUserHash(request.getUsername());
+        if(correctPassword == null) {
+            return new LoginResponse("User not found");
+        }
+        if(correctPassword.equals(hashPassword(request.getPassword()))) {
+            User user = daoFactory.makeUserDAO().login(request.getUsername(), request.getPassword());
+
+            AuthToken authToken = daoFactory.makeAuthtokenDAO().insertAuthToken(user.getAlias());
+            return new LoginResponse(user, authToken);
+        } else {
+            return new LoginResponse("Incorrect password");
+        }
     }
 
     public RegisterResponse register(RegisterRequest request){
@@ -38,44 +58,45 @@ public class UserService {
             throw new RuntimeException("[Bad Request] Missing an image URL");
         }
 
-        User user = getDummyUser();
-        AuthToken authToken = getDummyAuthToken();
+
+        String url = daoFactory.makeS3DAO().uploadProfileImage(request.getAlias(), request.getImageUrl());
+        String hashedPassword = hashPassword(request.getPassword());
+
+        User user = daoFactory.makeUserDAO().register(request.getAlias(), request.getFirstName(), request.getLastName(), url, hashedPassword);
+        AuthToken authToken = daoFactory.makeAuthtokenDAO().insertAuthToken(user.getAlias());
         return new RegisterResponse(user, authToken);
     }
     public LogoutResponse logout(LogoutRequest request) {
         if(request.getAuthToken() == null){
             throw new RuntimeException("[Bad Request] Missing an auth token");
         }
+        daoFactory.makeAuthtokenDAO().removeAuthToken(request.getAuthToken());
         return new LogoutResponse();
     }
 
-    /**
-     * Returns the dummy user to be returned by the login operation.
-     * This is written as a separate method to allow mocking of the dummy user.
-     *
-     * @return a dummy user.
-     */
-    User getDummyUser() {
-        return getFakeData().getFirstUser();
+    public GetUserResponse getUser(GetUserRequest request) {
+        if (request.getAlias() == null) {
+            throw new RuntimeException("[Bad Request] Missing an alias");
+        } else if (request.getAuthToken() == null) {
+            throw new RuntimeException("[Bad Request] Missing an auth token");
+        }
+        User user = daoFactory.makeUserDAO().getUser(request.getAlias());
+        return new GetUserResponse(user);
     }
 
-    /**
-     * Returns the dummy auth token to be returned by the login operation.
-     * This is written as a separate method to allow mocking of the dummy auth token.
-     *
-     * @return a dummy auth token.
-     */
-    AuthToken getDummyAuthToken() {
-        return getFakeData().getAuthToken();
-    }
-
-    /**
-     * Returns the {@link FakeData} object used to generate dummy users and auth tokens.
-     * This is written as a separate method to allow mocking of the {@link FakeData}.
-     *
-     * @return a {@link FakeData} instance.
-     */
-    FakeData getFakeData() {
-        return FakeData.getInstance();
+    private static String hashPassword(String passwordToHash) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(passwordToHash.getBytes());
+            byte[] bytes = md.digest();
+            StringBuilder sb = new StringBuilder();
+            for (byte aByte : bytes) {
+                sb.append(Integer.toString((aByte & 0xff) + 0x100, 16).substring(1));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+        return "FAILED TO HASH";
     }
 }
