@@ -28,6 +28,7 @@ public class GetFollowersHandler implements RequestHandler<FollowersRequest, Fol
     @Override
     public FollowersResponse handleRequest(FollowersRequest request, Context context) {
         FollowService service = new FollowService(new DAOFactory());
+        System.out.println("GetFollowersHandler.handleRequest: " + request);
         return service.getFollowers(request);
     }
 }

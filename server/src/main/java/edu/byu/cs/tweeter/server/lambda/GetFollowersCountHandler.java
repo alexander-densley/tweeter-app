@@ -13,6 +13,7 @@ public class GetFollowersCountHandler implements RequestHandler<FollowersCountRe
     @Override
     public FollowersCountResponse handleRequest(FollowersCountRequest request, Context context) {
         FollowService service = new FollowService(new DAOFactory());
+        System.out.println("GetFollowersCountHandler.handleRequest: " + request);
         return service.getFollowersCount(request);
     }
 }

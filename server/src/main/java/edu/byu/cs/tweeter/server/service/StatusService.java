@@ -1,5 +1,8 @@
 package edu.byu.cs.tweeter.server.service;
 
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+
 import java.util.List;
 
 import edu.byu.cs.tweeter.model.domain.Status;
@@ -76,17 +79,19 @@ public class StatusService {
             throw new RuntimeException("[Bad Request] Request needs to have an auth token");
         }
 
-        boolean validAuth = daoFactory.makeAuthtokenDAO().isAuthTokenValid(request.getAuthToken());
-        if(!validAuth){
-            return new PostStatusResponse("Invalid auth token");
-        }
+//        boolean validAuth = daoFactory.makeAuthtokenDAO().isAuthTokenValid(request.getAuthToken());
+//        if(!validAuth){
+//            return new PostStatusResponse("Invalid auth token");
+//        }
         boolean statusPosted = daoFactory.makeStatusDAO().postStatus(request.getStatus());
 
         if(statusPosted){
-            List<String> alias = daoFactory.makeFollowDAO().getFollowersByAlias(request.getStatus().getUser().getAlias());
-            for(String follower : alias){
-                daoFactory.makeFeedDAO().updateFeed(follower, request);
-            }
+//            AmazonSQS sqs = AmazonSQSClientBuilder.defaultClient();
+//            String postUpdateFeedMessagesQueueUrl = "https://sqs.us-east-1.amazonaws.com/333252448291/PostStatusQueue";
+//            List<String> alias = daoFactory.makeFollowDAO().getFollowersByAlias(request.getStatus().getUser().getAlias());
+////            for(String follower : alias){
+////                daoFactory.makeFeedDAO().updateFeed(follower, request.getStatus());
+////            }
             return new PostStatusResponse();
         }
         else{

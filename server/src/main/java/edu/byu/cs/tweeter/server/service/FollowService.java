@@ -63,6 +63,7 @@ public class FollowService {
         } else if (request.getAuthToken() == null) {
             throw new RuntimeException("[Bad Request] Request needs to have an auth token");
         }
+        System.out.println("FollowService.getFollowers: " + request.getFollowerAlias());
         FollowersResponse response = daoFactory.makeFollowDAO().getFollowers(request);
         return response;
     }
@@ -73,6 +74,7 @@ public class FollowService {
         } else if (request.getAuthToken() == null) {
             throw new RuntimeException("[Bad Request] Request needs to have an auth token");
         }
+        System.out.println("FollowService.getFollowersCount: " + request.getTargetAlias());
         int count = daoFactory.makeFollowDAO().getFollowersCount(request.getTargetAlias(), request.getAuthToken());
 
         return new FollowersCountResponse(count);

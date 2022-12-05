@@ -15,11 +15,15 @@ import edu.byu.cs.tweeter.model.net.response.StoryResponse;
 import edu.byu.cs.tweeter.server.dao.dao_interface.FeedDAOInterface;
 import edu.byu.cs.tweeter.server.dao.model.DynamoDBFeed;
 import edu.byu.cs.tweeter.server.dao.model.DynamoDBStatus;
+import software.amazon.awssdk.awscore.util.SignerOverrideUtils;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteItemEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.BatchWriteResult;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryConditional;
 import software.amazon.awssdk.enhanced.dynamodb.model.QueryEnhancedRequest;
+import software.amazon.awssdk.enhanced.dynamodb.model.WriteBatch;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
 public class DynamoDBFeedDAO extends MainDAO implements FeedDAOInterface {
@@ -69,8 +73,7 @@ public class DynamoDBFeedDAO extends MainDAO implements FeedDAOInterface {
     }
 
     @Override
-    public void updateFeed(String alias, PostStatusRequest request) {
-        Status status = request.getStatus();
+    public void updateFeed(String alias, Status status) {
         String dateTime = status.getDate();
         Long convertedDateTime = Long.valueOf(dateTime);
 
@@ -78,5 +81,46 @@ public class DynamoDBFeedDAO extends MainDAO implements FeedDAOInterface {
         DynamoDBFeed addedFeed = new DynamoDBFeed(alias, convertedDateTime, dynamoDBStatus);
 
         feedTable.putItem(addedFeed);
+    }
+
+    @Override
+    public void addFeedBatch(Status postedStatus, List<String> followerAliases) {
+        System.out.println("Adding feed batch");
+        List<DynamoDBFeed> feedBatch = new ArrayList<>();
+        for (String followerAlias : followerAliases) {
+            DynamoDBFeed feed = new DynamoDBFeed(followerAlias, Long.valueOf(postedStatus.getDate()), new DynamoDBStatus(postedStatus.getPost(), postedStatus.getUser().getAlias(), Long.valueOf(postedStatus.getDate()), postedStatus.getUrls(), postedStatus.getMentions()));
+            feedBatch.add(feed);
+            if (feedBatch.size() == 25) {
+                writeChunkOfFeed(feedBatch);
+                feedBatch = new ArrayList<>();
+            }
+        }
+        if (feedBatch.size() > 0) {
+            writeChunkOfFeed(feedBatch);
+        }
+    }
+
+    private void writeChunkOfFeed(List<DynamoDBFeed> feedBatch) {
+        System.out.println("Writing chunk of feed");
+        if(feedBatch.size() > 25) {
+            throw new RuntimeException("feedBatch is too large");
+        }
+        WriteBatch.Builder<DynamoDBFeed> writeBatchBuilder = WriteBatch.builder(DynamoDBFeed.class).mappedTableResource(feedTable);
+        for (DynamoDBFeed feed : feedBatch) {
+            writeBatchBuilder.addPutItem(builder -> builder.item(feed));
+        }
+        BatchWriteItemEnhancedRequest writeBatchRequest = BatchWriteItemEnhancedRequest.builder()
+                .writeBatches(writeBatchBuilder.build()).build();
+
+        try{
+            System.out.println("Writing batch");
+            BatchWriteResult result = enhancedClient.batchWriteItem(writeBatchRequest);
+            if(result.unprocessedPutItemsForTable(feedTable).size() > 0) {
+                writeChunkOfFeed(result.unprocessedPutItemsForTable(feedTable));
+            }
+        }catch (Exception e) {
+            System.out.println("DIDNT WORK");
+            e.printStackTrace();
+        }
     }
 }

@@ -1,5 +1,11 @@
 package edu.byu.cs.tweeter.server.dao;
 
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
+import com.google.gson.Gson;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,14 +33,43 @@ public class DynamoDBStatusDAO extends MainDAO implements StatusDAOInterface {
 
     @Override
     public boolean postStatus(Status status) {
-        Long dateTime = Long.valueOf(status.getDate());
-        try{
-            DynamoDBStatus dynamoDBStatus = new DynamoDBStatus(status.getPost(), status.getUser().getAlias(), dateTime, status.getUrls(), status.getMentions());
+//        Long dateTime = Long.valueOf(status.getDate());
+//        try{
+//            DynamoDBStatus dynamoDBStatus = new DynamoDBStatus(status.getPost(), status.getUser().getAlias(), dateTime, status.getUrls(), status.getMentions());
+//            statusTable.putItem(dynamoDBStatus);
+//            return true;
+//        }catch (Exception e){
+//            System.out.println(e.getMessage());
+//            System.out.println("error posting status");
+//            return false;
+//        }
+        AmazonSQS sqs = AmazonSQSClientBuilder.defaultClient();
+        String postUpdateFeedMessagesQueueUrl = "https://sqs.us-east-1.amazonaws.com/333252448291/PostStatusQueue";
+
+        Gson gson = new Gson();
+        Long datetime = Long.valueOf(status.getDate());
+
+        try {
+            // #1: Add status to story table
+            DynamoDBStatus dynamoDBStatus = new DynamoDBStatus(status.getPost(),
+                    status.getUser().getAlias(), datetime, status.getUrls(), status.getMentions());
+            System.out.println("Adding status to story table");
             statusTable.putItem(dynamoDBStatus);
+
+            // #2: Add status to feed table, by sending message to SQS queue
+            String messageBody = gson.toJson(status);
+
+            SendMessageRequest sendMessageRequest = new SendMessageRequest()
+                    .withQueueUrl(postUpdateFeedMessagesQueueUrl)
+                    .withMessageBody(messageBody);
+
+            SendMessageResult sendMessageResult = sqs.sendMessage(sendMessageRequest);
+            System.out.println("Sent message to SQS queue: " + sendMessageResult.getMessageId());
+
             return true;
-        }catch (Exception e){
-            System.out.println(e.getMessage());
-            System.out.println("error posting status");
+        } catch (Exception e) {
+            System.err.println("Post did not work");
+            e.printStackTrace();
             return false;
         }
 
